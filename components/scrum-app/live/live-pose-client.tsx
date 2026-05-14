@@ -184,6 +184,8 @@ export function LivePoseClient() {
       const video = videoRef.current;
       if (!video) {
         stopCamera();
+        setLoading(false);
+        setError("Could not attach camera preview. Try again.");
         return;
       }
       video.srcObject = stream;
@@ -192,20 +194,37 @@ export function LivePoseClient() {
           resolve();
           return;
         }
-        const onOk = () => {
+        let settled = false;
+        const cleanup = () => {
+          clearTimeout(timeoutId);
           video.removeEventListener("loadeddata", onOk);
+          video.removeEventListener("canplay", onOk);
           video.removeEventListener("error", onErr);
-          resolve();
         };
-        const onErr = () => {
-          video.removeEventListener("loadeddata", onOk);
-          video.removeEventListener("error", onErr);
-          reject(new Error("Video failed to load"));
+        const finish = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          fn();
         };
+        const onOk = () => finish(() => resolve());
+        const onErr = () =>
+          finish(() => reject(new Error("Video failed to load")));
+        const timeoutId = window.setTimeout(
+          () => finish(() => reject(new Error("Camera preview timed out"))),
+          25_000,
+        );
         video.addEventListener("loadeddata", onOk);
+        video.addEventListener("canplay", onOk);
         video.addEventListener("error", onErr);
       });
-      await video.play();
+      try {
+        await video.play();
+      } catch (playErr) {
+        throw playErr instanceof Error
+          ? playErr
+          : new Error("Could not play camera preview");
+      }
 
       const landmarker = await createLandmarker();
       lmRef.current = landmarker;
@@ -258,8 +277,36 @@ export function LivePoseClient() {
       </header>
 
       <div className="relative flex flex-1 flex-col">
+        {/* Keep video in the document before "running" so refs exist when starting the camera */}
+        <div
+          ref={wrapRef}
+          className={
+            running
+              ? "relative min-h-[45vh] w-full flex-1"
+              : "pointer-events-none fixed left-0 top-0 -z-10 max-h-[3px] max-w-[3px] overflow-hidden opacity-0"
+          }
+          aria-hidden={!running}
+        >
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className={
+              running
+                ? "absolute inset-0 size-full object-cover"
+                : "block h-px w-px"
+            }
+          />
+          <canvas
+            ref={canvasRef}
+            className={`pointer-events-none absolute inset-0 size-full object-cover ${
+              running ? "" : "hidden"
+            }`}
+          />
+        </div>
+
         {!running ? (
-          <div className="flex flex-col items-center justify-center gap-4 px-6 py-14">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-14">
             <Video className="size-14 text-muted-foreground" />
             <p className="max-w-xs text-center text-muted-foreground text-sm leading-relaxed">
               Uses your front camera. The lite model overlays a skeleton and
@@ -285,56 +332,41 @@ export function LivePoseClient() {
             ) : null}
           </div>
         ) : (
-          <>
-            <div ref={wrapRef} className="relative min-h-[45vh] w-full flex-1">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className="absolute inset-0 size-full object-cover"
-              />
-              <canvas
-                ref={canvasRef}
-                className="pointer-events-none absolute inset-0 size-full object-cover"
-              />
+          <div className="border-border border-t bg-card px-4 py-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="font-semibold text-foreground text-sm">
+                Joint angles
+              </h2>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2 font-medium text-muted-foreground text-xs"
+              >
+                <CircleOff className="size-4" />
+                Stop camera
+              </button>
             </div>
-
-            <div className="border-border border-t bg-card px-4 py-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <h2 className="font-semibold text-foreground text-sm">
-                  Joint angles
-                </h2>
-                <button
-                  type="button"
-                  onClick={stopCamera}
-                  className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2 font-medium text-muted-foreground text-xs"
-                >
-                  <CircleOff className="size-4" />
-                  Stop camera
-                </button>
-              </div>
-              {angles.length === 0 ? (
-                <p className="text-muted-foreground text-xs">
-                  Step back so your full torso and limbs are visible. Readings
-                  appear as confidence improves.
-                </p>
-              ) : (
-                <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                  {angles.map((row) => (
-                    <li
-                      key={row.label}
-                      className="flex justify-between rounded-lg bg-secondary px-2 py-1.5 tabular-nums"
-                    >
-                      <span className="text-muted-foreground">{row.label}</span>
-                      <span className="font-semibold text-foreground">
-                        {row.degrees}°
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </>
+            {angles.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                Step back so your full torso and limbs are visible. Readings
+                appear as confidence improves.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                {angles.map((row) => (
+                  <li
+                    key={row.label}
+                    className="flex justify-between rounded-lg bg-secondary px-2 py-1.5 tabular-nums"
+                  >
+                    <span className="text-muted-foreground">{row.label}</span>
+                    <span className="font-semibold text-foreground">
+                      {row.degrees}°
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
     </div>
