@@ -9,28 +9,20 @@ import {
 } from "react";
 import {
   ArrowLeft,
-  CircleOff,
   Video,
 } from "lucide-react";
-import {
-  FilesetResolver,
-  PoseLandmarker,
-} from "@mediapipe/tasks-vision";
 import { useMobileViewport } from "@/hooks/use-mobile-viewport";
-import { computeScrumAnglesMp, type JointAngleRow } from "./scrum-joint-angles";
+import { createVisionLandmarker } from "./create-vision-landmarker";
+import type { JointAngleRow } from "./scrum-joint-angles";
 import { DesktopLiveGate, HydratingGate } from "./live-gates";
-import { drawMpPoseFrame } from "./draw-skeleton-frame";
-
-const TASKS_VERSION = "0.10.21";
-const WASM_ROOT = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/wasm`;
-const MODEL_LITE =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
-
-const VIS = 0.32;
-
-type PoseLandmarkerInstance = Awaited<
-  ReturnType<typeof PoseLandmarker.createFromOptions>
->;
+import {
+  detectAndDrawLandmarks,
+  type BlendInsightRow,
+} from "./live-landmarker-tick";
+import type { VisionLandmarkerHandle } from "./create-vision-landmarker";
+import { LIVE_TRACK_MODES, type LiveTrackMode } from "./live-track-mode";
+import { LiveResultsPanel } from "./live-results-panel";
+import { LiveTrackPicker } from "./live-track-picker";
 
 const POSE_MODEL_LOAD_MS = 180_000;
 
@@ -50,39 +42,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   });
 }
 
-async function createLandmarker(): Promise<PoseLandmarkerInstance> {
-  const wasm = await FilesetResolver.forVisionTasks(WASM_ROOT);
-
-  async function attempt(delegate: "GPU" | "CPU") {
-    return PoseLandmarker.createFromOptions(wasm, {
-      baseOptions: {
-        modelAssetPath: MODEL_LITE,
-        delegate,
-      },
-      runningMode: "VIDEO",
-      numPoses: 1,
-      minPoseDetectionConfidence: 0.35,
-      minPosePresenceConfidence: 0.35,
-      minTrackingConfidence: 0.35,
-    });
-  }
-
-  try {
-    return await attempt("GPU");
-  } catch {
-    return await attempt("CPU");
-  }
-}
-
 export function LivePoseClient() {
   const mobile = useMobileViewport();
   const videoRef = useRef<HTMLVideoElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lmRef = useRef<PoseLandmarkerInstance | null>(null);
+  const lmHandleRef = useRef<VisionLandmarkerHandle | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number>(0);
+  const rafRef = useRef(0);
   const angleThrottleRef = useRef(0);
+  const loadGenRef = useRef(0);
+  const trackModeRef = useRef<LiveTrackMode>("body");
+
+  const [trackMode, setTrackMode] = useState<LiveTrackMode>("body");
 
   const [running, setRunning] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -90,14 +62,23 @@ export function LivePoseClient() {
   const [poseError, setPoseError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [angles, setAngles] = useState<JointAngleRow[]>([]);
+  const [blendRows, setBlendRows] = useState<BlendInsightRow[]>([]);
+  const [handLines, setHandLines] = useState<string[]>([]);
+
+  useEffect(() => {
+    trackModeRef.current = trackMode;
+  }, [trackMode]);
 
   const stopCamera = useCallback(() => {
+    loadGenRef.current += 1;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = 0;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-    void lmRef.current?.close();
-    lmRef.current = null;
+    if (lmHandleRef.current) {
+      void lmHandleRef.current.landmarker.close();
+      lmHandleRef.current = null;
+    }
     const vid = videoRef.current;
     if (vid) {
       vid.srcObject = null;
@@ -113,18 +94,22 @@ export function LivePoseClient() {
       }
     }
     setAngles([]);
+    setBlendRows([]);
+    setHandLines([]);
     setRunning(false);
     setPoseLoading(false);
     setPoseError(null);
   }, []);
 
+  const runTickRef = useRef<() => Promise<void>>(async () => {});
+
   const tick = useCallback(async () => {
-    if (!lmRef.current) return;
+    const handle = lmHandleRef.current;
+    if (!handle) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
-    const landmarker = lmRef.current;
 
     if (
       !video ||
@@ -132,7 +117,9 @@ export function LivePoseClient() {
       !wrap ||
       video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
     ) {
-      rafRef.current = requestAnimationFrame(() => void tick());
+      rafRef.current = requestAnimationFrame(() => {
+        void runTickRef.current();
+      });
       return;
     }
 
@@ -155,40 +142,84 @@ export function LivePoseClient() {
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        const t =
-          typeof performance !== "undefined" ? performance.now() : Date.now();
-        const result = landmarker.detectForVideo(video, t);
-        if (!lmRef.current) return;
 
-        const poseLm = result.landmarks?.[0];
-        if (poseLm?.length) {
-          drawMpPoseFrame(
-            ctx,
-            poseLm,
-            vw,
-            vh,
-            bw,
-            bh,
-            PoseLandmarker.POSE_CONNECTIONS,
-            VIS,
-          );
-          const now =
-            typeof performance !== "undefined" ? performance.now() : Date.now();
-          if (now - angleThrottleRef.current > 240) {
-            angleThrottleRef.current = now;
-            setAngles(
-              computeScrumAnglesMp(poseLm, vw, vh, VIS + 0.03),
-            );
-          }
-        } else {
-          ctx.clearRect(0, 0, bw, bh);
-        }
+        if (!lmHandleRef.current) return;
+
+        detectAndDrawLandmarks(handle, video, ctx, bw, bh, vw, vh, {
+          throttleRef: angleThrottleRef,
+          setAngles,
+          setBlendRows,
+          setHandLines,
+        });
       }
     }
 
-    if (!lmRef.current) return;
-    rafRef.current = requestAnimationFrame(() => void tick());
+    if (!lmHandleRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      void runTickRef.current();
+    });
   }, []);
+
+  useEffect(() => {
+    runTickRef.current = tick;
+  }, [tick]);
+
+  const startLandmarkerSession = useCallback(async (stream: MediaStream) => {
+    const gen = ++loadGenRef.current;
+    setPoseError(null);
+    setPoseLoading(true);
+    setAngles([]);
+    setBlendRows([]);
+    setHandLines([]);
+
+    if (lmHandleRef.current) {
+      void lmHandleRef.current.landmarker.close();
+      lmHandleRef.current = null;
+    }
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+
+    try {
+      const mode = trackModeRef.current;
+      const handle = await withTimeout(
+        createVisionLandmarker(mode),
+        POSE_MODEL_LOAD_MS,
+        "Model is taking too long. Check your connection, or tap Stop camera and try again.",
+      );
+      if (gen !== loadGenRef.current) {
+        void handle.landmarker.close();
+        return;
+      }
+      if (!streamRef.current || videoRef.current?.srcObject !== stream) {
+        void handle.landmarker.close();
+        return;
+      }
+      lmHandleRef.current = handle;
+      angleThrottleRef.current = 0;
+      rafRef.current = requestAnimationFrame(() => {
+        void runTickRef.current();
+      });
+    } catch (e) {
+      if (gen === loadGenRef.current) {
+        setPoseError(
+          e instanceof Error
+            ? e.message
+            : "Could not load tracking model in this browser.",
+        );
+      }
+    } finally {
+      if (gen === loadGenRef.current) {
+        setPoseLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!running) return;
+    const stream = streamRef.current;
+    if (!stream) return;
+    void startLandmarkerSession(stream);
+  }, [running, trackMode, startLandmarkerSession]);
 
   const startCamera = useCallback(async () => {
     setError(null);
@@ -248,36 +279,9 @@ export function LivePoseClient() {
           : new Error("Could not play camera preview");
       }
 
-      setRunning(true);
       setLoading(false);
       setPoseError(null);
-      setPoseLoading(true);
-
-      void (async () => {
-        try {
-          const landmarker = await withTimeout(
-            createLandmarker(),
-            POSE_MODEL_LOAD_MS,
-            "Pose model is taking too long. Check your connection and try Stop camera, then start again.",
-          );
-          if (!streamRef.current || videoRef.current?.srcObject !== stream) {
-            void landmarker.close();
-            return;
-          }
-          lmRef.current = landmarker;
-          angleThrottleRef.current = 0;
-          if (rafRef.current) cancelAnimationFrame(rafRef.current);
-          rafRef.current = requestAnimationFrame(() => void tick());
-        } catch (e) {
-          const msg =
-            e instanceof Error
-              ? e.message
-              : "Could not load pose model in this browser.";
-          setPoseError(msg);
-        } finally {
-          setPoseLoading(false);
-        }
-      })();
+      setRunning(true);
     } catch (e) {
       setLoading(false);
       stopCamera();
@@ -293,7 +297,7 @@ export function LivePoseClient() {
           : msg,
       );
     }
-  }, [stopCamera, tick]);
+  }, [stopCamera]);
 
   useEffect(() => {
     if (!running) return;
@@ -311,6 +315,8 @@ export function LivePoseClient() {
     return <DesktopLiveGate />;
   }
 
+  const hint = LIVE_TRACK_MODES.find((m) => m.id === trackMode)?.hint ?? "";
+
   return (
     <div className="flex min-h-screen flex-col bg-background pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-20 flex items-center gap-3 border-border border-b bg-background/95 px-4 py-3 backdrop-blur-md">
@@ -324,13 +330,12 @@ export function LivePoseClient() {
         <div>
           <h1 className="font-bold text-foreground text-lg">Live pose</h1>
           <p className="text-muted-foreground text-xs">
-            MediaPipe lite — skeleton and angles in-browser only
+            MediaPipe in-browser — {hint}
           </p>
         </div>
       </header>
 
       <div className="relative flex flex-1 flex-col">
-        {/* Keep video in the document before "running" so refs exist when starting the camera */}
         <div
           ref={wrapRef}
           className={
@@ -343,15 +348,15 @@ export function LivePoseClient() {
           {running && poseLoading ? (
             <div className="absolute inset-x-0 top-11 z-20 flex justify-center px-4">
               <p className="max-w-sm rounded-lg bg-background/90 px-3 py-2 text-center text-foreground text-xs shadow-lg backdrop-blur-sm">
-                Loading pose overlay… first open downloads several MB (WASM and
-                model). You should see the camera above while this finishes.
+                Loading tracking model… first time per mode can take a minute on
+                mobile data. The camera preview should stay visible.
               </p>
             </div>
           ) : null}
           {running && poseError ? (
             <div className="absolute inset-x-0 top-11 z-20 flex justify-center px-4">
               <p className="max-w-sm rounded-lg bg-destructive/15 px-3 py-2 text-center text-accent text-xs shadow-lg backdrop-blur-sm">
-                {poseError} Skeleton and angles stay off until this succeeds.
+                {poseError} Try another mode or stop and start again.
               </p>
             </div>
           ) : null}
@@ -377,14 +382,18 @@ export function LivePoseClient() {
         {!running ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-14">
             <Video className="size-14 text-muted-foreground" />
+            <LiveTrackPicker
+              value={trackMode}
+              onChange={setTrackMode}
+              disabled={loading}
+            />
             <p className="max-w-xs text-center text-muted-foreground text-sm leading-relaxed">
-              Uses your front camera. The lite model overlays a skeleton and
-              approximates hinge angles for coaching cues. Nothing leaves this
-              device.
+              Choose full body, face, or hands, then start. Each mode downloads
+              its own model the first time. Nothing leaves this device.
             </p>
             <p className="max-w-[18rem] text-center text-muted-foreground text-[11px] leading-relaxed opacity-90">
-              First open downloads the WASM runtime and pose model (~few MB).
-              Use Wi‑Fi if you are cautious about mobile data.
+              Wi‑Fi recommended for first open. You can switch modes after the
+              camera is running.
             </p>
             <button
               type="button"
@@ -401,41 +410,22 @@ export function LivePoseClient() {
             ) : null}
           </div>
         ) : (
-          <div className="border-border border-t bg-card px-4 py-3">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <h2 className="font-semibold text-foreground text-sm">
-                Joint angles
-              </h2>
-              <button
-                type="button"
-                onClick={stopCamera}
-                className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2 font-medium text-muted-foreground text-xs"
-              >
-                <CircleOff className="size-4" />
-                Stop camera
-              </button>
+          <>
+            <div className="border-border border-b bg-card/80 px-3 py-2 backdrop-blur-sm">
+              <LiveTrackPicker
+                value={trackMode}
+                onChange={setTrackMode}
+                disabled={poseLoading}
+              />
             </div>
-            {angles.length === 0 ? (
-              <p className="text-muted-foreground text-xs">
-                Step back so your full torso and limbs are visible. Readings
-                appear as confidence improves.
-              </p>
-            ) : (
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                {angles.map((row) => (
-                  <li
-                    key={row.label}
-                    className="flex justify-between rounded-lg bg-secondary px-2 py-1.5 tabular-nums"
-                  >
-                    <span className="text-muted-foreground">{row.label}</span>
-                    <span className="font-semibold text-foreground">
-                      {row.degrees}°
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+            <LiveResultsPanel
+              trackMode={trackMode}
+              angles={angles}
+              blendRows={blendRows}
+              handLines={handLines}
+              onStop={stopCamera}
+            />
+          </>
         )}
       </div>
     </div>
