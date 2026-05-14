@@ -1,0 +1,412 @@
+{
+  "title": "Scrum Strength Framework",
+  "overview": {
+    "focusAreas": [
+      "Force production",
+      "Force transfer",
+      "Neck and trap resilience",
+      "Scrum-specific coordination under fatigue"
+    ],
+    "trainingGoals": [
+      "Produce horizontal force",
+      "Reinforce low body positioning",
+      "Train anti-collapse mechanics",
+      "Strengthen neck and thoracic integrity",
+      "Improve repeated high-force efforts"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Primary Scrum Force Exercises",
+      "description": "Foundational strength movements for scrum dominance.",
+      "exercises": [
+        {
+          "name": "Trap Bar Deadlift",
+          "purpose": [
+            "Posterior chain strength",
+            "Horizontal force potential",
+            "Total body force production"
+          ],
+          "benefits": [
+            "Lower back friendly",
+            "High transfer to scrum drive"
+          ],
+          "coachingPoints": [
+            "Neutral spine",
+            "Brace before pull",
+            "Drive through floor",
+            "Explosive concentric intent"
+          ],
+          "prescription": {
+            "sets": "4-6",
+            "reps": "3-5",
+            "intensity": "Heavy"
+          }
+        },
+        {
+          "name": "Front Squat",
+          "purpose": [
+            "Scrum posture",
+            "Thoracic stiffness",
+            "Quad strength"
+          ],
+          "benefits": [
+            "Upright torso development",
+            "Core integrity under load"
+          ],
+          "coachingPoints": [
+            "Elbows high",
+            "Brace trunk",
+            "Controlled descent"
+          ],
+          "prescription": {
+            "sets": "4-5",
+            "reps": "4-6"
+          }
+        },
+        {
+          "name": "Safety Bar Box Squat",
+          "purpose": [
+            "Hip drive",
+            "Low-body positioning",
+            "Bracing strength"
+          ],
+          "benefits": [
+            "Reduced spinal fatigue",
+            "Strong transfer to scrum angles"
+          ],
+          "coachingPoints": [
+            "Sit back into box",
+            "Maintain torso angle",
+            "Explode upward"
+          ]
+        },
+        {
+          "name": "Heavy Sled Push",
+          "purpose": [
+            "Horizontal force production",
+            "Leg drive mechanics",
+            "Body angle specificity"
+          ],
+          "prescription": {
+            "distance": "10-20m",
+            "rounds": "6-10",
+            "load": "Heavy grind"
+          },
+          "variations": [
+            "Low handles",
+            "Scrum stance",
+            "Partner resisted"
+          ]
+        },
+        {
+          "name": "Scrum Machine Isometrics",
+          "purpose": [
+            "Specific joint angle force production",
+            "Pressure transfer",
+            "Scrum stiffness"
+          ],
+          "methods": [
+            "5-10 second maximal drives",
+            "Repeated effort holds",
+            "Position-specific angles"
+          ],
+          "notes": [
+            "Quality over duration"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Trunk and Force Transfer Training",
+      "description": "Improve force transmission through the body.",
+      "exercises": [
+        {
+          "name": "Zercher Carry",
+          "purpose": [
+            "Anterior core strength",
+            "Thoracic bracing",
+            "Upper back endurance"
+          ],
+          "prescription": {
+            "distance": "20-40m",
+            "load": "Heavy"
+          }
+        },
+        {
+          "name": "Heavy Farmer Carry",
+          "purpose": [
+            "Total body stiffness",
+            "Grip strength",
+            "Brace endurance"
+          ]
+        },
+        {
+          "name": "Copenhagen Plank",
+          "purpose": [
+            "Adductor strength",
+            "Pelvic control",
+            "Groin injury prevention"
+          ]
+        },
+        {
+          "name": "Weighted Deadbug",
+          "purpose": [
+            "Anti-extension core control",
+            "Brace integrity"
+          ]
+        },
+        {
+          "name": "Landmine Rotation",
+          "purpose": [
+            "Rotational force absorption",
+            "Bind stability",
+            "Asymmetrical force control"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Neck and Upper Back Resilience",
+      "description": "Increase neck durability and upper back support.",
+      "exercises": [
+        {
+          "name": "Wrestler Bridges",
+          "purpose": [
+            "Neck loading tolerance"
+          ],
+          "notes": [
+            "Only for experienced athletes"
+          ]
+        },
+        {
+          "name": "Banded Neck Isometrics",
+          "directions": [
+            "Flexion",
+            "Extension",
+            "Lateral",
+            "Rotation"
+          ],
+          "prescription": {
+            "duration": "20-30 seconds"
+          }
+        },
+        {
+          "name": "Shrugs and Trap 3 Raises",
+          "purpose": [
+            "Neck support",
+            "Scapular integrity",
+            "Postural endurance"
+          ]
+        },
+        {
+          "name": "Seal Rows",
+          "purpose": [
+            "Binding power",
+            "Thoracic endurance",
+            "Lat strength"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Explosive Power Development",
+      "description": "Improve rate of force development.",
+      "exercises": [
+        {
+          "name": "Hang Cleans",
+          "purpose": [
+            "Triple extension",
+            "Hip explosion",
+            "Neural output"
+          ]
+        },
+        {
+          "name": "Box Jumps",
+          "purpose": [
+            "Elastic explosiveness"
+          ],
+          "notes": [
+            "Low volume, high quality"
+          ]
+        },
+        {
+          "name": "Broad Jumps",
+          "purpose": [
+            "Horizontal explosiveness"
+          ]
+        },
+        {
+          "name": "Medicine Ball Chest Drives",
+          "purpose": [
+            "Explosive scrum intent",
+            "Upper body projection"
+          ]
+        }
+      ]
+    }
+  ],
+  "positionSpecificRecommendations": {
+    "frontRow": {
+      "priorities": [
+        "Neck strength",
+        "Thoracic stiffness",
+        "Isometric strength",
+        "Hip drive"
+      ],
+      "recommendedExercises": [
+        "Scrum Machine Isometrics",
+        "Front Squat",
+        "Heavy Sled Push",
+        "Neck Isometrics",
+        "Zercher Carry"
+      ]
+    },
+    "locks": {
+      "priorities": [
+        "Force production",
+        "Bind integrity",
+        "Trunk stiffness"
+      ],
+      "recommendedExercises": [
+        "Trap Bar Deadlift",
+        "Romanian Deadlift",
+        "Heavy Rows",
+        "Loaded Carries",
+        "Scrum Machine Drives"
+      ]
+    },
+    "looseForwards": {
+      "priorities": [
+        "Repeated power",
+        "Mobility under force",
+        "Collision conditioning"
+      ],
+      "recommendedExercises": [
+        "Hang Cleans",
+        "Sled Push Intervals",
+        "Single-leg Strength Work",
+        "Rotational Core Training",
+        "Loaded Carries"
+      ]
+    }
+  },
+  "injuryPrevention": {
+    "focusAreas": [
+      "Adductors",
+      "Neck",
+      "Calves",
+      "Thoracic mobility",
+      "Hip internal rotation"
+    ],
+    "weeklyExercises": [
+      "Copenhagen Planks",
+      "Tibialis Raises",
+      "Calf Isometrics",
+      "Thoracic Rotation Mobility",
+      "Hip Internal Rotation Drills"
+    ]
+  },
+  "exampleSessions": [
+    {
+      "name": "Day A - Max Strength",
+      "exercises": [
+        {
+          "exercise": "Trap Bar Deadlift",
+          "sets": 5,
+          "reps": 3
+        },
+        {
+          "exercise": "Front Squat",
+          "sets": 4,
+          "reps": 5
+        },
+        {
+          "exercise": "Heavy Sled Push",
+          "sets": 8,
+          "distance": "15m"
+        },
+        {
+          "exercise": "Seal Row",
+          "sets": 4,
+          "reps": 8
+        },
+        {
+          "exercise": "Copenhagen Plank",
+          "sets": 3,
+          "duration": "30s"
+        },
+        {
+          "exercise": "Neck Isometrics",
+          "directions": 4
+        }
+      ]
+    },
+    {
+      "name": "Day B - Power and Specificity",
+      "exercises": [
+        {
+          "exercise": "Hang Clean",
+          "sets": 5,
+          "reps": 3
+        },
+        {
+          "exercise": "Broad Jump",
+          "sets": 4,
+          "reps": 3
+        },
+        {
+          "exercise": "Scrum Machine Isometric Drives",
+          "sets": 8,
+          "duration": "5s"
+        },
+        {
+          "exercise": "Zercher Carry",
+          "sets": 4,
+          "distance": "30m"
+        },
+        {
+          "exercise": "Landmine Rotation",
+          "sets": 3,
+          "reps": 10
+        },
+        {
+          "exercise": "Medicine Ball Chest Drives",
+          "sets": 4,
+          "reps": 5
+        }
+      ]
+    }
+  ],
+  "coachingPrinciples": [
+    {
+      "title": "Train Positions Not Just Muscles",
+      "description": "Scrum performance is highly angle dependent."
+    },
+    {
+      "title": "Use Isometrics",
+      "description": "Scrums involve large amounts of static force production and stiffness."
+    },
+    {
+      "title": "Train Under Fatigue",
+      "description": "Body position deteriorates under fatigue, so training should simulate this."
+    },
+    {
+      "title": "Progress Neck Training Carefully",
+      "description": "Avoid excessive loading progression too quickly."
+    },
+    {
+      "title": "Prioritize Horizontal Force",
+      "description": "Sleds and scrum-specific force vectors matter more than purely vertical gym strength."
+    }
+  ],
+  "advancedMethods": [
+    "Flywheel resisted scrum work",
+    "Velocity-based squat training",
+    "Contrast pairings",
+    "Cluster set scrummaging",
+    "Isometric mid-thigh pulls",
+    "Tempo eccentrics",
+    "Blood flow restriction rehab"
+  ]
+}

@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bind
 
-## Getting Started
+A **frontend-only** strength and coaching companion for a rugby **forward pack**, built around a scrum-centric training framework. There is **no database**: all content comes from a checked-in JSON file.
 
-First, run the development server:
+## Stack
+
+- [Next.js](https://nextjs.org) (App Router) · React 19 · TypeScript
+- [Tailwind CSS](https://tailwindcss.com) v4
+- [Framer Motion](https://www.framer.com/motion/) · [Lucide](https://lucide.dev) icons
+
+Install and run with **pnpm** (recommended on this project):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The home route redirects to the exercise library.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm build    # production build
+pnpm start    # run production server
+pnpm lint     # eslint
+```
 
-## Learn More
+## What you get
 
-To learn more about Next.js, take a look at the following resources:
+The UI is a **mobile-style** dark layout: bottom navigation, grouped exercise cards, expandable sessions and position notes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Route | Purpose |
+|--------|---------|
+| `/` | Exercise library by category plus an injury-prevention summary |
+| `/exercise/[id]` | Single exercise: coaching points, prescription, notes, set tracker |
+| `/sessions` | Example training days (expandable blocks) |
+| `/positions` | Front row / locks / loose forwards priorities and suggestions |
+| `/principles` | Coaching principles and advanced methods |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Legacy URLs **`/scrum`** and **`/scrum/[id]`** redirect to **`/`** and **`/exercise/[id]`**.
 
-## Deploy on Vercel
+## Editing content
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Source file:** [`data/scrum-strength-framework.json`](data/scrum-strength-framework.json)
+- **Types and helpers:** [`lib/scrum/types.ts`](lib/scrum/types.ts), [`lib/scrum/data.ts`](lib/scrum/data.ts)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+After structural changes (new top-level keys or shapes), extend the TypeScript types and any components that should display them. **Do not rely on migrations** — there is no server-side datastore in this app.
+
+## Project layout (high level)
+
+- `app/` — routes and layouts
+- `components/scrum-app/` — shared UI (navigation, cards, sessions, principles, etc.)
+- `data/` — framework JSON
+- `lib/scrum/` — parsing, IDs, helpers
+
+---
+
+The `scripts/` directory is listed in `.gitignore` so local tooling can live there without being committed. If you add your own helpers, keep paths and package scripts aligned with your machine.

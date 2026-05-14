@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      { source: "/scrum", destination: "/", permanent: true },
+      { source: "/scrum/:id", destination: "/exercise/:id", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
