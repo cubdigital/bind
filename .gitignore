@@ -20,6 +20,9 @@
 # production
 /build
 
+# local automation (do not commit)
+/scripts/
+
 # misc
 .DS_Store
 *.pem
