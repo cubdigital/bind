@@ -32,6 +32,24 @@ type PoseLandmarkerInstance = Awaited<
   ReturnType<typeof PoseLandmarker.createFromOptions>
 >;
 
+const POSE_MODEL_LOAD_MS = 180_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = window.setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      },
+    );
+  });
+}
+
 async function createLandmarker(): Promise<PoseLandmarkerInstance> {
   const wasm = await FilesetResolver.forVisionTasks(WASM_ROOT);
 
@@ -68,6 +86,8 @@ export function LivePoseClient() {
 
   const [running, setRunning] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [poseLoading, setPoseLoading] = useState(false);
+  const [poseError, setPoseError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [angles, setAngles] = useState<JointAngleRow[]>([]);
 
@@ -94,6 +114,8 @@ export function LivePoseClient() {
     }
     setAngles([]);
     setRunning(false);
+    setPoseLoading(false);
+    setPoseError(null);
   }, []);
 
   const tick = useCallback(async () => {
@@ -226,12 +248,36 @@ export function LivePoseClient() {
           : new Error("Could not play camera preview");
       }
 
-      const landmarker = await createLandmarker();
-      lmRef.current = landmarker;
       setRunning(true);
       setLoading(false);
-      angleThrottleRef.current = 0;
-      rafRef.current = requestAnimationFrame(() => void tick());
+      setPoseError(null);
+      setPoseLoading(true);
+
+      void (async () => {
+        try {
+          const landmarker = await withTimeout(
+            createLandmarker(),
+            POSE_MODEL_LOAD_MS,
+            "Pose model is taking too long. Check your connection and try Stop camera, then start again.",
+          );
+          if (!streamRef.current || videoRef.current?.srcObject !== stream) {
+            void landmarker.close();
+            return;
+          }
+          lmRef.current = landmarker;
+          angleThrottleRef.current = 0;
+          if (rafRef.current) cancelAnimationFrame(rafRef.current);
+          rafRef.current = requestAnimationFrame(() => void tick());
+        } catch (e) {
+          const msg =
+            e instanceof Error
+              ? e.message
+              : "Could not load pose model in this browser.";
+          setPoseError(msg);
+        } finally {
+          setPoseLoading(false);
+        }
+      })();
     } catch (e) {
       setLoading(false);
       stopCamera();
@@ -248,6 +294,13 @@ export function LivePoseClient() {
       );
     }
   }, [stopCamera, tick]);
+
+  useEffect(() => {
+    if (!running) return;
+    const v = videoRef.current;
+    if (!v?.srcObject) return;
+    void v.play().catch(() => undefined);
+  }, [running]);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
 
@@ -282,24 +335,40 @@ export function LivePoseClient() {
           ref={wrapRef}
           className={
             running
-              ? "relative min-h-[45vh] w-full flex-1"
+              ? "relative min-h-[45vh] w-full flex-1 bg-black"
               : "pointer-events-none fixed left-0 top-0 -z-10 max-h-[3px] max-w-[3px] overflow-hidden opacity-0"
           }
           aria-hidden={!running}
         >
+          {running && poseLoading ? (
+            <div className="absolute inset-x-0 top-11 z-20 flex justify-center px-4">
+              <p className="max-w-sm rounded-lg bg-background/90 px-3 py-2 text-center text-foreground text-xs shadow-lg backdrop-blur-sm">
+                Loading pose overlay… first open downloads several MB (WASM and
+                model). You should see the camera above while this finishes.
+              </p>
+            </div>
+          ) : null}
+          {running && poseError ? (
+            <div className="absolute inset-x-0 top-11 z-20 flex justify-center px-4">
+              <p className="max-w-sm rounded-lg bg-destructive/15 px-3 py-2 text-center text-accent text-xs shadow-lg backdrop-blur-sm">
+                {poseError} Skeleton and angles stay off until this succeeds.
+              </p>
+            </div>
+          ) : null}
           <video
             ref={videoRef}
             playsInline
             muted
+            autoPlay
             className={
               running
-                ? "absolute inset-0 size-full object-cover"
+                ? "absolute inset-0 z-0 size-full object-cover"
                 : "block h-px w-px"
             }
           />
           <canvas
             ref={canvasRef}
-            className={`pointer-events-none absolute inset-0 size-full object-cover ${
+            className={`pointer-events-none absolute inset-0 z-10 size-full object-cover ${
               running ? "" : "hidden"
             }`}
           />
