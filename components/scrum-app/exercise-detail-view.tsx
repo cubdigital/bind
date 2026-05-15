@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -12,6 +13,7 @@ import {
 import type { RoutedExercise } from "@/lib/scrum/types";
 import { SetTracker } from "@/components/scrum-app/set-tracker";
 import { parseSetRepDefaults } from "@/components/scrum-app/exercise-prescription-utils";
+import { getExerciseHeroMedia } from "@/lib/scrum/exercise-hero-media";
 
 type Props = {
   routed: RoutedExercise;
@@ -20,6 +22,8 @@ type Props = {
 export function ExerciseDetailView({ routed }: Props) {
   const router = useRouter();
   const exercise = routed.exercise;
+  const hero = getExerciseHeroMedia(exercise.name);
+  const heroIsGif = hero?.imageUrl.toLowerCase().endsWith(".gif");
   const { sets: defaultSets, reps: defaultReps } = parseSetRepDefaults(
     exercise.prescription,
   );
@@ -72,6 +76,28 @@ export function ExerciseDetailView({ routed }: Props) {
         <h1 className="font-bold text-4xl text-foreground leading-tight">
           {exercise.name}
         </h1>
+
+        {hero ? (
+          <div className="space-y-2 pt-2">
+            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted ring-1 ring-border">
+              <Image
+                src={hero.imageUrl}
+                alt={hero.alt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 448px"
+                unoptimized={heroIsGif}
+                priority
+              />
+            </div>
+            <p className="text-center text-muted-foreground text-[11px] leading-snug">
+              {hero.commonsTitle}. {hero.sourceNote}
+            </p>
+            <p className="text-foreground/90 text-sm leading-relaxed">
+              {hero.movementDescription}
+            </p>
+          </div>
+        ) : null}
 
         {exercise.purpose && exercise.purpose.length > 0 ? (
           <div className="flex flex-wrap gap-2 pt-2">
