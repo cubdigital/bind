@@ -3,11 +3,44 @@ import { landmarkToVideoPx, mapPointCover } from "./map-keypoint-cover";
 
 type Conn = { start: number; end: number };
 
-const LINE = "hsla(354, 100%, 71%, 0.92)";
-const JOINT = "hsla(30, 100%, 70%, 0.95)";
-const CORE = "hsla(240, 9%, 11%, 0.55)";
-
 export type LandmarkDrawStyle = "body" | "face" | "hands";
+
+type DrawPalette = {
+  line: string;
+  joint: string;
+  core: string;
+  lineWidth: number;
+  outerR: number;
+  innerR: number;
+};
+
+/** Body: soft pink/cream. Hands: saturated red / yellow, thicker strokes. Face: medium. */
+const PALETTE: Record<LandmarkDrawStyle, DrawPalette> = {
+  body: {
+    line: "hsla(354, 100%, 71%, 0.92)",
+    joint: "hsla(30, 100%, 70%, 0.95)",
+    core: "hsla(240, 9%, 11%, 0.55)",
+    lineWidth: 3,
+    outerR: 6,
+    innerR: 3.5,
+  },
+  face: {
+    line: "hsla(354, 100%, 68%, 0.9)",
+    joint: "hsla(48, 100%, 58%, 0.95)",
+    core: "hsla(240, 12%, 14%, 0.6)",
+    lineWidth: 2,
+    outerR: 4,
+    innerR: 2.5,
+  },
+  hands: {
+    line: "hsla(0, 92%, 52%, 0.98)",
+    joint: "hsla(51, 100%, 48%, 0.98)",
+    core: "hsla(0, 70%, 18%, 0.92)",
+    lineWidth: 5,
+    outerR: 6.5,
+    innerR: 4,
+  },
+};
 
 /** Hand and face tasks often report visibility as 0 or omit it — still draw those landmarks. */
 function passesVisibility(
@@ -33,21 +66,20 @@ export function drawLandmarkSubjects(
 ): void {
   ctx.clearRect(0, 0, boxW, boxH);
 
-  const lineWidth = style === "body" ? 3 : 2;
-  const outerR = style === "body" ? 6 : 4;
-  const innerR = style === "body" ? 3.5 : 2.5;
+  const p = PALETTE[style];
 
   for (const landmarks of subjects) {
     if (!landmarks?.length) continue;
 
     const pts = landmarks.map((lm) => {
-      const p = landmarkToVideoPx(lm, vw, vh);
-      return mapPointCover(p, vw, vh, boxW, boxH);
+      const pix = landmarkToVideoPx(lm, vw, vh);
+      return mapPointCover(pix, vw, vh, boxW, boxH);
     });
 
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = p.lineWidth;
     ctx.lineCap = "round";
-    ctx.strokeStyle = LINE;
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = p.line;
 
     for (const { start: ia, end: ib } of connections) {
       const a = landmarks[ia];
@@ -67,13 +99,13 @@ export function drawLandmarkSubjects(
       const k = landmarks[i];
       if (!passesVisibility(k, style, minVis)) continue;
       const { x, y } = pts[i];
-      ctx.fillStyle = CORE;
+      ctx.fillStyle = p.core;
       ctx.beginPath();
-      ctx.arc(x, y, outerR, 0, Math.PI * 2);
+      ctx.arc(x, y, p.outerR, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = JOINT;
+      ctx.fillStyle = p.joint;
       ctx.beginPath();
-      ctx.arc(x, y, innerR, 0, Math.PI * 2);
+      ctx.arc(x, y, p.innerR, 0, Math.PI * 2);
       ctx.fill();
     }
   }
